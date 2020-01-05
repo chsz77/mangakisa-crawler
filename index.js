@@ -30,7 +30,7 @@ async function getManga(keyword, min, max) {
 	return arr;
 }
 
-async function getChapters(url, min = 0, max = 99999) {
+async function getChapters(url, min = 0, max = 99999, fromCrawl = false) {
 	if (!url.includes(MAIN_URL)) {
 		url = MAIN_URL + url;
 	}
@@ -50,7 +50,11 @@ async function getChapters(url, min = 0, max = 99999) {
 	if (Number(arr[0].chapter > Number(arr[arr.length - 1].chapter))) {
 		arr.reverse();
 	}
-	console.log(arr);
+	if (fromCrawl) {
+		console.log(arr[0].chapter + ' - ' + arr[arr.length - 1].chapter, arr.length);
+	} else {
+		console.log(arr);
+	}
 	return arr;
 }
 
@@ -71,7 +75,7 @@ async function getImages(url, chapter) {
 }
 
 async function download(img) {
-	let filename = `./${DOWNLOAD_DIR}/${img.dir}-${img.id}.jpg`;
+	let filename = `./manga/${DOWNLOAD_DIR}/${img.dir}-${img.id}.jpg`;
 	let res = await rp({
 		encoding: 'binary',
 		uri: img.link,
@@ -89,7 +93,7 @@ async function download(img) {
 }
 
 async function crawlManga(url, min, max) {
-	const links = await getChapters(url, min, max);
+	const links = await getChapters(url, min, max, true);
 	let totalChapter = `${links[0].chapter} - ${links[links.length - 1].chapter}`;
 
 	for (const link of links) {
@@ -99,17 +103,15 @@ async function crawlManga(url, min, max) {
 			await download(img);
 			printProcess(link.chapter, imgLinks.length, totalChapter);
 		}
-		process.stdout.write('\033[0G');
-		process.stdout.write('Downloaded chapter ' + link.chapter + '.');
+		console.log('Downloaded chapter ' + link.chapter + '.');
 		downloaded = 0;
 	}
 	// console.log(links);
 }
 
 function printProcess(chapter, imgLen, totalChapter) {
-	process.stdout.write('\033[0G');
-	process.stdout.write('Downloading chapter ' + totalChapter + '. ');
-	process.stdout.write(`Chapter ${chapter}: ${imgLen} || Downloaded: ${downloaded}`);
+	console.log('Downloading chapter ' + totalChapter + '. ');
+	console.log(`Chapter ${chapter}: ${imgLen} || Downloaded: ${downloaded}`);
 }
 
 if (argv[2] === 'manga') {
