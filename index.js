@@ -83,9 +83,9 @@ async function download(img) {
 		!fs.existsSync(`./manga`) && fs.mkdirSync(`./manga`);
 		!fs.existsSync(`./manga/${DOWNLOAD_DIR}/`) && fs.mkdirSync(`./manga/${DOWNLOAD_DIR}`);
 		await writeFileAsync(filename, res.body, 'binary').catch((err) => console.log('Write error'));
-		return (downloaded += 1);
+		downloaded += 1;
 
-		// process.stdout.write(', ' + img.id);
+		return process.stdout.write(', ' + img.id);
 	} else {
 		return console.log('err');
 	}
@@ -100,9 +100,25 @@ async function crawlManga(url, min, max) {
 		let imgLinks = await getImages(link.url, link.chapter).catch((err) => console.log(err));
 		printProcess(link.chapter, imgLinks.length);
 		let tempArr = [];
-		for (const img of imgLinks) {
-			await download(img);
-			printProcess(link.chapter, imgLinks.length, false);
+		for (let i = 0; i < imgLinks.length; i++) {
+			if (!tempArr.includes(i)) {
+				if (i + 2 < imgLinks.length) {
+					await Promise.allSettled([
+						download(imgLinks[i]),
+						download(imgLinks[i + 1]),
+						download(imgLinks[i + 2])
+					]);
+					tempArr.push(i + 1);
+					tempArr.push(i + 2);
+				} else if (i + 1 < imgLinks.length) {
+					await Promise.allSettled([ download(imgLinks[i]), download(imgLinks[i + 1]) ]);
+					tempArr.push(i + 1);
+				} else {
+					download(imgLinks[i]);
+					tempArr.push(i);
+				}
+				printProcess(link.chapter, imgLinks.length);
+			}
 		}
 		printProcess(link.chapter, imgLinks.length, true);
 
