@@ -50,9 +50,7 @@ async function getChapters(url, min = 0, max = 99999, fromCrawl = false) {
 	if (Number(arr[0].chapter > Number(arr[arr.length - 1].chapter))) {
 		arr.reverse();
 	}
-	if (fromCrawl) {
-		console.log(arr[0].chapter + ' - ' + arr[arr.length - 1].chapter, arr.length);
-	} else {
+	if (!fromCrawl) {
 		console.log(arr);
 	}
 	return arr;
@@ -80,13 +78,14 @@ async function download(img) {
 		encoding: 'binary',
 		uri: img.link,
 		resolveWithFullResponse: true
-	});
+	}).catch((err) => console.log(err));
 	if (res) {
 		!fs.existsSync(`./manga`) && fs.mkdirSync(`./manga`);
 		!fs.existsSync(`./manga/${DOWNLOAD_DIR}/`) && fs.mkdirSync(`./manga/${DOWNLOAD_DIR}`);
 		await writeFileAsync(filename, res.body, 'binary').catch((err) => console.log('Write error'));
-
 		return (downloaded += 1);
+
+		// process.stdout.write(', ' + img.id);
 	} else {
 		return console.log('err');
 	}
@@ -94,24 +93,31 @@ async function download(img) {
 
 async function crawlManga(url, min, max) {
 	const links = await getChapters(url, min, max, true);
-	let totalChapter = `${links[0].chapter} - ${links[links.length - 1].chapter}`;
+	let totalChapter = `${links[0].chapter} - ${links[links.length - 1].chapter} | ${links.length} chapter(s)`;
+	console.log('Downloading chapter ' + totalChapter + '. ');
 
 	for (const link of links) {
 		let imgLinks = await getImages(link.url, link.chapter).catch((err) => console.log(err));
-		printProcess(link.chapter, imgLinks.length, totalChapter);
+		printProcess(link.chapter, imgLinks.length);
+		let tempArr = [];
 		for (const img of imgLinks) {
 			await download(img);
-			printProcess(link.chapter, imgLinks.length, totalChapter);
+			printProcess(link.chapter, imgLinks.length, false);
 		}
-		console.log('Downloaded chapter ' + link.chapter + '.');
+		printProcess(link.chapter, imgLinks.length, true);
+
 		downloaded = 0;
 	}
 	// console.log(links);
 }
 
-function printProcess(chapter, imgLen, totalChapter) {
-	console.log('Downloading chapter ' + totalChapter + '. ');
-	console.log(`Chapter ${chapter}: ${imgLen} || Downloaded: ${downloaded}`);
+function printProcess(chapter, imgLen, complete = false) {
+	process.stdout.write('\033c');
+	if (complete) {
+		process.stdout.write('Downloaded chapter ' + chapter + '.');
+	} else {
+		process.stdout.write(`Downloading Chapter ${chapter}: ${imgLen} || Downloaded: ${downloaded}`);
+	}
 }
 
 if (argv[2] === 'manga') {
